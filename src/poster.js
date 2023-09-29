@@ -120,9 +120,10 @@ async function run(pathToTargets, from, pathToPost, maxPosts, pathToBio, website
 	const lines = contents.split(/\r\n?|\n/).filter(line=>line.startsWith('http'));
 	// console.log(lines);
 	
-	let successfulPostCount = 0;
+	let newPostCount = 0;
+	let existingPostCount = 0;
 	for (let i=0; i<lines.length; i++) {
-		if (successfulPostCount == maxPosts) {
+		if (newPostCount == maxPosts) {
 			break; 
 		}
 
@@ -174,11 +175,14 @@ async function run(pathToTargets, from, pathToPost, maxPosts, pathToBio, website
 							post_date: createRandomDateInPastYear()
 						}
 					]);
-					successfulPostCount++;
+					newPostCount++;
 				}
 				catch(err) {}
 			}
-			const report = `${i}|post|${line}|${postid}|${successfulPostCount}`;
+			else {
+				existingPostCount++;
+			}
+			const report = `${i}|post|${line}|${postid}|${newPostCount}|${existingPostCount}`;
 			console.log(report);
 
 		}
@@ -207,7 +211,7 @@ async function run(pathToTargets, from, pathToPost, maxPosts, pathToBio, website
 			console.log(report);
 		}
 	}
-	console.log(`Done, new posts: ${successfulPostCount}`);
+	console.log(`Done, new posts: ${newPostCount}`);
 }
 
 program
