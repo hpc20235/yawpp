@@ -97,6 +97,23 @@ async function pickRandomPost(pathToPost) {
 	return post;
 }
 
+async function getPostId(xmlClient, blogid, username, password, postTitle) {
+	let postid = -1;
+	try {
+		const posts = await xmlClient.methodCall2('wp.getPosts', [
+			blogid,
+			username,
+			password
+		]);
+		const post = posts.find(p=>p.post_title === postTitle);
+		if (post) {
+			postid = post.post_id;
+		}
+	} 
+	catch(err) {}
+	return postid;
+}
+
 async function run(pathToTargets, from, pathToPost, maxPosts, pathToBio, website) {
 
 	const contents = await fs.readFile(pathToTargets, {encoding: 'utf8'});
@@ -139,24 +156,28 @@ async function run(pathToTargets, from, pathToPost, maxPosts, pathToBio, website
 			const post = await pickRandomPost(pathToPost);
 			const parsedPost = htmlParser.parse(post);
 			const postTitle = parsedPost.querySelector('title').text;
+
 			// https://codex.wordpress.org/XML-RPC_WordPress_API/Posts#Parameters_3
-			let postid = -1;
-			try {
-				postid = await xmlClient.methodCall2('wp.newPost', [
-					blogid,
-					username,
-					password,
-					{
-						post_type: 'post', // The post type (e.g., 'post', 'page', etc.)
-						post_status: 'publish', // The post status (e.g., 'publish', 'draft', etc.)
-						post_title: postTitle, // The title of the post
-						post_content: post,
-						post_date: createRandomDateInPastYear()
-					}
-				]);
-				successfulPostCount++;
+			let postid = await getPostId(xmlClient, blogid, username, password, postTitle);
+			// console.log(`got post id: ${postid}`);
+			if (postid === -1) {
+				try {
+					postid = await xmlClient.methodCall2('wp.newPost', [
+						blogid,
+						username,
+						password,
+						{
+							post_type: 'post', // The post type (e.g., 'post', 'page', etc.)
+							post_status: 'publish', // The post status (e.g., 'publish', 'draft', etc.)
+							post_title: postTitle, // The title of the post
+							post_content: post,
+							post_date: createRandomDateInPastYear()
+						}
+					]);
+					successfulPostCount++;
+				}
+				catch(err) {}
 			}
-			catch(err) {}
 			const report = `${i}|post|${line}|${postid}|${successfulPostCount}`;
 			console.log(report);
 
@@ -186,7 +207,7 @@ async function run(pathToTargets, from, pathToPost, maxPosts, pathToBio, website
 			console.log(report);
 		}
 	}
-	console.log(`Done, successful posts: ${successfulPostCount}`);
+	console.log(`Done, new posts: ${successfulPostCount}`);
 }
 
 program
@@ -197,7 +218,7 @@ program
 	.option('-b, --bio <string>', 'path to a file with biography')
 	.option('-w, --website <string>', 'website url with which to update profile')
 	.action(async ({targets, from, posts, maxposts, bio, website})=>{
-		console.log(`Run with ${targets}, ${from}, ${posts}, ${maxposts}, ${bio}, ${website}`);
+		console.log(`targets: ${targets} from: ${from} posts: ${posts} maxposts: ${maxposts} bio: ${bio} website: ${website}`);
 		await run(targets, from, posts, maxposts, bio, website);
 	});
 
