@@ -103,9 +103,17 @@ async function getPostId(xmlClient, blogid, username, password, postTitle) {
 		const posts = await xmlClient.methodCall2('wp.getPosts', [
 			blogid,
 			username,
-			password
+			password,
+			{
+				post_type: "post",
+				number: 200000 // default: 10 
+			},
+			[
+				'post_id', 'post_title'
+			],
+			
 		]);
-		const post = posts.find(p=>p.post_title === postTitle);
+		const post = posts.find(p=>p.post_title.toLowerCase() === postTitle.toLowerCase());
 		if (post) {
 			postid = post.post_id;
 		}
