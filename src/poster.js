@@ -98,27 +98,40 @@ async function pickRandomPost(pathToPost) {
 }
 
 async function getPostId(xmlClient, blogid, username, password, postTitle) {
+	const bulkSize = 100;
+	let bulkCounter = 0;
 	let postid = -1;
-	try {
-		const posts = await xmlClient.methodCall2('wp.getPosts', [
-			blogid,
-			username,
-			password,
-			{
-				post_type: "post",
-				number: 200000 // default: 10 
-			},
-			[
-				'post_id', 'post_title'
-			],
-			
-		]);
-		const post = posts.find(p=>p.post_title.toLowerCase() === postTitle.toLowerCase());
-		if (post) {
-			postid = post.post_id;
+	let posts = []
+	do {
+		try {
+			posts = await xmlClient.methodCall2('wp.getPosts', [
+				blogid,
+				username,
+				password,
+				{
+					post_type: "post",
+					number: bulkSize, // default: 10,
+					offset: bulkCounter*bulkSize
+				},
+				[
+					'post_id', 'post_title'
+				],
+				
+			]);
+			// console.log(`posts: ${posts.length}`)
+			const post = posts.find(p=>p.post_title.toLowerCase() === postTitle.toLowerCase());
+			if (post) {
+				postid = post.post_id;
+				// console.log(`post found: ${postid}`);
+				break;
+			}
+			bulkCounter++;
+		} 
+		catch(err) {
+			break;
 		}
-	} 
-	catch(err) {}
+	}
+	while (posts.length > 0);
 	return postid;
 }
 
