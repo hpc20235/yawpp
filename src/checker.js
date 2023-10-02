@@ -6,7 +6,6 @@ const urlParser = require('node:url');
 const util = require('util');
 const xmlrpc = require('xmlrpc');
 const qs = require('node:querystring');
-const _ = require('lodash');
 
 const DefaultNReq = 10;
 
