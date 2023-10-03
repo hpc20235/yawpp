@@ -5,13 +5,14 @@ const {default: axios} = require('axios');
 const urlParser = require('node:url');
 const util = require('util');
 const htmlParser = require('node-html-parser');
-const xmlrpc = require('xmlrpc');
+const xmlrpc = require('@0xengine/xmlrpc');
 const qs = require('node:querystring');
 const _ = require('lodash');
 const moment = require('moment');
 const Chance = require('chance')
 const chance = new Chance();
 
+const DefaultNoDuplicates = false;
 const DefaultMaxPosts = 20;
 const DefaultFrom = 0;
 
@@ -135,7 +136,7 @@ async function getPostId(xmlClient, blogid, username, password, postTitle) {
 	return postid;
 }
 
-async function run(pathToTargets, from, pathToPost, maxPosts, pathToBio, website) {
+async function run(pathToTargets, from, pathToPost, noDuplicates, maxPosts, pathToBio, website) {
 
 	const contents = await fs.readFile(pathToTargets, {encoding: 'utf8'});
 	const lines = contents.split(/\r\n?|\n/).filter(line=>line.startsWith('http'));
@@ -180,8 +181,10 @@ async function run(pathToTargets, from, pathToPost, maxPosts, pathToBio, website
 			const postTitle = parsedPost.querySelector('title').text;
 
 			// https://codex.wordpress.org/XML-RPC_WordPress_API/Posts#Parameters_3
-			let postid = await getPostId(xmlClient, blogid, username, password, postTitle);
-			// console.log(`got post id: ${postid}`);
+			let postid = -1;
+			if (noDuplicates === true) {
+				postid = await getPostId(xmlClient, blogid, username, password, postTitle);
+			}
 			if (postid === -1) {
 				try {
 					postid = await xmlClient.methodCall2('wp.newPost', [
@@ -239,12 +242,13 @@ program
 	.requiredOption('-t, --targets <string>', 'path to file with the target lines')
 	.option('-f, --from <linenumber>', 'start from line number <linenumber>', DefaultFrom)
 	.option('-p, --posts <string>', 'path to folder with posts')
+	.option(`-a, --noduplicates <boolean>', 'does not post existing posts (default: ${DefaultNoDuplicates})`, DefaultNoDuplicates)
 	.option('-m, --maxposts <number>', `maximal number of successfull posts to do and exit (default: ${DefaultMaxPosts})`, DefaultMaxPosts)
 	.option('-b, --bio <string>', 'path to a file with biography')
 	.option('-w, --website <string>', 'website url with which to update profile')
-	.action(async ({targets, from, posts, maxposts, bio, website})=>{
-		console.log(`targets: ${targets} from: ${from} posts: ${posts} maxposts: ${maxposts} bio: ${bio} website: ${website}`);
-		await run(targets, from, posts, maxposts, bio, website);
+	.action(async ({targets, from, posts, noduplicates, maxposts, bio, website})=>{
+		console.log(`targets: ${targets} from: ${from} posts: ${posts} noduplicates: ${noduplicates} maxposts: ${maxposts} bio: ${bio} website: ${website}`);
+		await run(targets, from, posts, noduplicates, maxposts, bio, website);
 	});
 
 

@@ -4,9 +4,8 @@ const fs = require('fs/promises');
 const {default: axios} = require('axios');
 const urlParser = require('node:url');
 const util = require('util');
-const xmlrpc = require('xmlrpc');
+const xmlrpc = require('@0xengine/xmlrpc');
 const qs = require('node:querystring');
-
 const DefaultNReq = 10;
 
 function createXmlClient(hostname, protocol) {
