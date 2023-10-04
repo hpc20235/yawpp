@@ -4,9 +4,27 @@
 
 `yawpp` includes two scripts, `checker.js` and `poster.js`.
 
-`checker.js` checks validity of Wordpress credentials using two methods: http wplogin and wordpress xmlrpc API. The script works fast with configurable number of simultaneous requests.
+`checker.js` checks validity of Wordpress credentials using two methods: http wplogin and [wordpress xmlrpc API](https://codex.wordpress.org/XML-RPC_WordPress_API/Posts). The script works fast with configurable number of simultaneous requests.
 
 `poster.js` creates posts using wordpress xml rpc api. So, it requires wp site to have enabled xml rpc api. The script posts sequentially. 
+
+# Installation
+
+You should have `nodejs` and `npm` to be installed on your system. The recommended way is to first install [nvm](https://github.com/nvm-sh/nvm) and then use it for node installation:
+
+```bash
+nvm install --lts
+```
+
+Having `nodejs` on your system, clone the repo and install dependencies:
+
+```bash
+git clone git@bitbucket.org:0xsky/yawpp.git
+cd yawpp
+npm install
+```
+
+Now you are ready to use `yawpp`.
 
 # Checker
 
