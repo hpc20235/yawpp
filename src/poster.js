@@ -15,6 +15,7 @@ const chance = new Chance();
 const DefaultNoDuplicates = false;
 const DefaultMaxPosts = 20;
 const DefaultFrom = 0;
+const DefaultSeparator = ";"
 
 function createRandomDateInPastYear() {
 	const year = moment().subtract(1, 'year').year();
@@ -136,7 +137,7 @@ async function getPostId(xmlClient, blogid, username, password, postTitle) {
 	return postid;
 }
 
-async function run(pathToTargets, from, pathToPost, noDuplicates, maxPosts, pathToBio, website) {
+async function run(pathToTargets, from, sep, pathToPost, noDuplicates, maxPosts, pathToBio, website) {
 
 	const contents = await fs.readFile(pathToTargets, {encoding: 'utf8'});
 	const lines = contents.split(/\r\n?|\n/).filter(line=>line.startsWith('http'));
@@ -154,7 +155,7 @@ async function run(pathToTargets, from, pathToPost, noDuplicates, maxPosts, path
 		}
 
 		const line = lines[i];
-		const [url, username, password] = line.split(';');
+		const [url, username, password] = line.split(sep);
 		const {host, hostname, protocol} = new urlParser.URL(url);
 		const xmlClient = createXmlClient(hostname, protocol);
 		
@@ -241,14 +242,15 @@ async function run(pathToTargets, from, pathToPost, noDuplicates, maxPosts, path
 program
 	.requiredOption('-t, --targets <string>', 'path to file with the target lines')
 	.option('-f, --from <linenumber>', 'start from line number <linenumber>', DefaultFrom)
+	.option('-s, --sep <char>', 'field separator of the lines', DefaultSeparator)
 	.option('-p, --posts <string>', 'path to folder with posts')
 	.option(`-a, --noduplicates <boolean>', 'does not post existing posts (default: ${DefaultNoDuplicates})`, DefaultNoDuplicates)
 	.option('-m, --maxposts <number>', `maximal number of successfull posts to do and exit (default: ${DefaultMaxPosts})`, DefaultMaxPosts)
 	.option('-b, --bio <string>', 'path to a file with biography')
 	.option('-w, --website <string>', 'website url with which to update profile')
-	.action(async ({targets, from, posts, noduplicates, maxposts, bio, website})=>{
-		console.log(`targets: ${targets} from: ${from} posts: ${posts} noduplicates: ${noduplicates} maxposts: ${maxposts} bio: ${bio} website: ${website}`);
-		await run(targets, from, posts, noduplicates, maxposts, bio, website);
+	.action(async ({targets, from, sep,posts, noduplicates, maxposts, bio, website})=>{
+		console.log(`targets: ${targets} from: ${from} sep: ${sep} posts: ${posts} noduplicates: ${noduplicates} maxposts: ${maxposts} bio: ${bio} website: ${website}`);
+		await run(targets, from, sep, posts, noduplicates, maxposts, bio, website);
 	});
 
 
