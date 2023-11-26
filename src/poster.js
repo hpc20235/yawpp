@@ -155,7 +155,9 @@ async function run(pathToTargets, from, sep, pathToPost, noDuplicates, maxPosts,
 		}
 
 		const line = lines[i];
-		const [url, username, password] = line.split(sep);
+		let re = sep === ":" ? /:(?=[^\/]*$)/ : new RegExp(sep);
+		
+		const [url, username, password] = line.split(re);
 		const {host, hostname, protocol} = new urlParser.URL(url);
 		const xmlClient = createXmlClient(hostname, protocol);
 		
