@@ -7,6 +7,7 @@ const util = require('util');
 const xmlrpc = require('@0xengine/xmlrpc');
 const qs = require('node:querystring');
 const DefaultNReq = 10;
+const DefaultFrom = 0;
 
 function createXmlClient(hostname, protocol) {
 	const xmlrpcOptions = {
@@ -75,7 +76,7 @@ async function wpLogin(host, protocol, username, password) {
 
 
 
-async function run(pathToTargets, nParrallelRequests) {
+async function run(pathToTargets, from, nParrallelRequests) {
 
 	const contents = await fs.readFile(pathToTargets, {encoding: 'utf8'});
 	const lines = contents.split(/\r\n?|\n/).filter(line=>line.startsWith('http'));
@@ -84,8 +85,8 @@ async function run(pathToTargets, nParrallelRequests) {
 		lines.length / nParrallelRequests :
 		Math.trunc(lines.length / nParrallelRequests) + 1;
 	
-	console.log(`nBulks: ${nBulks}, nReq: ${nParrallelRequests}`);
-	for (let i=0; i<nBulks; i++) {
+	console.log(`nBulks: ${nBulks}, from: ${from}, nReq: ${nParrallelRequests}`);
+	for (let i=from; i<nBulks; i++) {
 		const wpLoginPromises = [];
 		const getUsersBlogsPromises = [];
 		const startIdx = i*nParrallelRequests;
@@ -122,9 +123,10 @@ async function run(pathToTargets, nParrallelRequests) {
 
 program
 	.requiredOption('-t, --targets <string>', 'path to file with the target lines')
+	.option('-f, --from <number>', 'start from bulk number', DefaultFrom)
 	.option('-n, --requests <number>', 'parallel requests to launch', DefaultNReq)
-	.action(async ({targets, requests})=>{
-		await run(targets, requests);
+	.action(async ({targets, from, requests})=>{
+		await run(targets, from, requests);
 	});
 
 
