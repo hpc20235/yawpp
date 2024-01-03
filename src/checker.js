@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Command } = require('commander');
 const program = new Command();
 const fs = require('fs/promises');
@@ -6,8 +7,32 @@ const urlParser = require('node:url');
 const util = require('util');
 const xmlrpc = require('@0xengine/xmlrpc');
 const qs = require('node:querystring');
+const {SocksProxyAgent} = require('socks-proxy-agent');
+
 const DefaultNReq = 10;
 const DefaultFrom = 0;
+
+function getAxiosInstance() {
+	let instance;
+	if (process.env.PROXY_SOCKS === "true") {
+		const socks_proxy = 'socks://' + (process.env.PROXY_SOCKS_USER ? 
+			process.env.PROXY_SOCKS_USER + ":" + 
+			process.env.PROXY_SOCKS_PASS + "@" : "") +
+			process.env.PROXY_SOCKS_HOST + ":" + 
+			process.env.PROXY_SOCKS_PORT 
+		const socksAgent = new SocksProxyAgent(socks_proxy);
+		instance = new axios.create({
+				httpAgent: socksAgent,
+				httpsAgent:socksAgent
+		});
+	}
+	else {
+		instance = new axios.create();
+	}
+	return instance;
+}
+
+const axiosInst = getAxiosInstance();
 
 function createXmlClient(hostname, protocol) {
 	const xmlrpcOptions = {
@@ -42,7 +67,7 @@ async function wpLogin(host, protocol, username, password) {
 	};
 	try {
 		const url = `${protocol}//${host}/wp-login.php`;
-		const response = await axios.post(
+		const response = await axiosInst.post(
 			url, 
 			payload,
 			{
