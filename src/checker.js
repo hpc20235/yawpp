@@ -86,7 +86,7 @@ async function wpLogin(host, protocol, username, password) {
 			const reNoUser = new RegExp(`The username <strong>${username}</strong> is not registered on this site`);
 			const usernameIsNotRegistered = response.data.match(reNoUser) !== null;
 			//console.log(`username not registered: ${usernameIsNotRegistered}`);
-			const reInvalidPass = new RegExp(`The password you entered for the username <strong>${username}</strong> is incorrect`);
+			const reInvalidPass = new RegExp(`The password you entered for the username <strong>${username}</strong> is incorrect`); // will give false OK if non-english language is used
 			const passwordIsInvalid = response.data.match(reInvalidPass) !== null;
 			//console.log(`password is invalid: ${passwordIsInvalid}`);
 			const {headers} = response;
@@ -119,7 +119,7 @@ async function run(pathToTargets, from, nParrallelRequests) {
 		const startIdx = i*nParrallelRequests;
 		const endIdx = Math.min(lines.length, startIdx + nParrallelRequests);
 		
-		console.log(`bulk: ${i}, startIdx: ${startIdx} endIdx: ${endIdx}`);
+		console.log(`bulk: ${i} of ${nBulks}, startIdx: ${startIdx} endIdx: ${endIdx}`);
 		for (let j=startIdx; j<endIdx; j++) {
 			// console.log(`working on line: ${j}`);
 			const [url, username, password] = lines[j].split(';');
