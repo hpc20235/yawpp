@@ -60,41 +60,39 @@ node src/checker.js -t targets.txt -n 100
 node src/checker.js -t /tmp/wp.txt 
 nBulks: 2, nReq: 10
 bulk: 0, startIdx: 0 endIdx: 10
-login|http://localhost;user1;pass1|false|false|false|false
-login|http://localhost;user2;pass2|false|false|false|false
-login|http://localhost;user3;pass3|false|false|false|false
-login|http://localhost;user4;pass4|false|false|false|false
-login|http://localhost;user5;pass5|false|false|false|false
-login|http://localhost;user6;pass6|false|false|false|false
-login|http://localhost;user7;pass7|false|false|false|false
-login|http://localhost;user8;pass8|false|false|false|false
-login|http://localhost;user9;pass9|false|false|false|false
-login|http://localhost;user10;pass10|false|false|false|false
+login|http://localhost;user1;pass1|false|false
+login|http://localhost;user2;pass2|false|false
+login|http://localhost;user3;pass3|false|false
+login|http://localhost;user4;pass4|false|false
+login|http://localhost;user5;pass5|false|false
+login|http://localhost;user6;pass6|false|false
+login|http://localhost;user7;pass7|false|false
+login|http://localhost;user8;pass8|false|false
+login|http://localhost;user9;pass9|false|false
+login|http://localhost;user10;pass10|false|false
 bulk: 1, startIdx: 10 endIdx: 20
-login|http://localhost;user11;pass11|false|false|false|false
-login|http://localhost;user12;pass12|false|false|false|false
-login|http://localhost;user13;pass13|false|false|false|false
-login|http://localhost;user14;pass14|false|false|false|false
-login|http://localhost;user15;pass15|false|false|false|false
-login|http://localhost;user16;pass16|false|false|false|false
-login|http://localhost;user17;pass17|false|false|false|false
-login|http://localhost;user18;pass18|false|false|false|false
-login|http://localhost;user19;pass19|false|false|false|false
-login|http://localhost;user20;pass20|false|false|false|false
+login|http://localhost;user11;pass11|false|false
+login|http://localhost;user12;pass12|false|false
+login|http://localhost;user13;pass13|false|false
+login|http://localhost;user14;pass14|false|false
+login|http://localhost;user15;pass15|false|false
+login|http://localhost;user16;pass16|false|false
+login|http://localhost;user17;pass17|false|false
+login|http://localhost;user18;pass18|false|false
+login|http://localhost;user19;pass19|false|false
+login|http://localhost;user20;pass20|false|false
 ```
 
 The result lines are in the following format:
 
 ```
-login|line|wpLogin.usernameOk|wpLogin.passwordOk|wpLogin.loggedIn|xmlLoginOk
+login|line|wpLoginOk|xmlLoginOk
 ```
 
 * **login**: just a string *login*.
 * **line**: domain, e.g. *http://localhost*.
-* **wpLogin.usernameOk**: *true* if username valid.
-* **wpLogin.passwordOk**: *true* if password is valid.
-* **wpLogin.loggedIn**: *true* if login was successful; note: username and password maybe ok but login may fail because of cloudflare check, for example.
-* **xmlLoginok**: *true* if login by xml rpc api was successful.
+* **wpLoginOk**: *true* if login was successful; note: username and password maybe ok but login may fail because of cloudflare check, for example.
+* **xmlLoginOk**: *true* if login by xml rpc api was successful.
 
 
 # Poster
