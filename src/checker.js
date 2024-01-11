@@ -152,8 +152,8 @@ async function run(pathToTargets, from, nParrallelRequests) {
 			const report = `login|${line}|${wpLoginResult}|${xmlLoginResult}`;
 			console.log(report);
 		}
-
 	}
+	console.log('Finished all chunks')
 }
 
 program
@@ -162,11 +162,14 @@ program
 	.option('-n, --requests <number>', 'parallel requests to launch', DefaultNReq)
 	.action(async ({targets, from, requests})=>{
 		await run(targets, from, requests);
+		console.log('Finished run()');
 	});
 
 
 async function main() {
 	await program.parseAsync(process.argv);
+	console.log('Buy!');
+	process.exit(0); // something is not closed sometimes
 }
 
 main()
