@@ -125,7 +125,14 @@ async function run(pathToTargets, from, nParrallelRequests) {
 		for (let j=startIdx; j<endIdx; j++) {
 			// console.log(`working on line: ${j}|${lines[j]}`);
 			const [url, username, password] = lines[j].split(';');
-			const {host, hostname, protocol} = new urlParser.URL(url);
+			let host, hostname, protocol;
+			try {
+				({host, hostname, protocol} = new urlParser.URL(url));
+			}
+			catch(err) {
+				console.log(`error parsing url: ${err.message}`);
+				continue;
+			}
 			wpLoginPromises.push(wpLogin(host, protocol, username, password));
 			
 
