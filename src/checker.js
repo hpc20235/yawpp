@@ -11,7 +11,7 @@ const {SocksProxyAgent} = require('socks-proxy-agent');
 
 const DefaultNReq = 10;
 const DefaultFrom = 0;
-
+const DefaultSeparator = ';';
 const RequestTimeout = 60000; // 1 min 
  
 function rpcTimeout(ms) {
@@ -105,7 +105,7 @@ async function wpLogin(host, protocol, username, password) {
 
 
 
-async function run(pathToTargets, from, nParrallelRequests) {
+async function run(pathToTargets, from, nParrallelRequests, separator) {
 
 	const contents = await fs.readFile(pathToTargets, {encoding: 'utf8'});
 	const lines = contents.split(/\r\n?|\n/).filter(line=>line.startsWith('http'));
@@ -114,7 +114,7 @@ async function run(pathToTargets, from, nParrallelRequests) {
 		lines.length / nParrallelRequests :
 		Math.trunc(lines.length / nParrallelRequests) + 1;
 	
-	console.log(`nBulks: ${nBulks}, from: ${from}, nReq: ${nParrallelRequests}`);
+	console.log(`nBulks: ${nBulks}, from: ${from}, nReq: ${nParrallelRequests}, separator: ${separator}`);
 	for (let i=from; i<nBulks; i++) {
 		const wpLoginPromises = [];
 		const getUsersBlogsPromises = [];
@@ -124,7 +124,9 @@ async function run(pathToTargets, from, nParrallelRequests) {
 		console.log(`bulk: ${i} of ${nBulks}, startIdx: ${startIdx} endIdx: ${endIdx}`);
 		for (let j=startIdx; j<endIdx; j++) {
 			// console.log(`working on line: ${j}|${lines[j]}`);
-			const [url, username, password] = lines[j].split(';');
+			const re = new RegExp(`${separator}(?!\/\/)`);
+			const [url, username, password] = lines[j].split(re);
+			// console.log(`url:${url}, user:${username}, pass:${password}`);
 			let host, hostname, protocol;
 			try {
 				({host, hostname, protocol} = new urlParser.URL(url));
@@ -167,8 +169,9 @@ program
 	.requiredOption('-t, --targets <string>', 'path to file with the target lines')
 	.option('-f, --from <number>', 'start from bulk number', DefaultFrom)
 	.option('-n, --requests <number>', 'parallel requests to launch', DefaultNReq)
-	.action(async ({targets, from, requests})=>{
-		await run(targets, from, requests);
+	.option('-s, --separator <char>', 'field separator', DefaultSeparator)
+	.action(async ({targets, from, requests, separator})=>{
+		await run(targets, from, requests, separator);
 		console.log('Finished run()');
 	});
 
