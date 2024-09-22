@@ -46,11 +46,13 @@ node src/checker.js -t targets.txt
 
 ## Example 3
 
-Checks with 100 requests in parallel
+Checks with 100 requests in parallel with non-default separator ":" (default is ";")
 
 ```bash
-node src/checker.js -t targets.txt -n 100
+node src/checker.js -t targets.txt -n 100 -s :
 ```
+
+Note: a separator can be only a single character. When specifying on command line, don't include into double quotes.
 
 ## Result format
 
